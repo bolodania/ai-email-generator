@@ -1,0 +1,6 @@
+Flask
+generative-ai-hub-sdk[all]
+python-dotenv
+gunicorn
+cfenv
+sap-xssec

@@ -15,9 +15,6 @@ load_dotenv()
 
 local_testing = True
 
-with open(os.path.join(os.getcwd(), 'env_cloud.json')) as f:
-    hana_env_c = json.load(f)
-
 with open(os.path.join(os.getcwd(), 'env_config.json')) as f:
     aicore_config = json.load(f)
 
@@ -47,29 +44,53 @@ def generate_email_with_llm(new_payload, old_payload):
         )
         language_name = language_code_to_name(lang_code if lang_code else "EN")
 
-        prompt = f"""
-            You are a multilingual assistant. Your task is to compare the old and new payloads of a Business Partner profile and generate a personalized, polite, and human-sounding email to inform the Business Partner about the changes made to their profile.
+                # Determine if this is a CREATE (no old_payload or empty object)
+        is_create = not old_payload or not old_payload.get("BusinessPartnerDetails")
 
-            Write the email in the language: **{language_name}**
+        if is_create:
+            prompt = f"""
+                You are a multilingual assistant. Your task is to generate a warm, professional welcome email for a newly created Business Partner profile.
 
-            If no changes are found, reply "NO_CHANGES"
+                Write the email in the language: **{language_name}**
 
-            Here is the OLD profile payload:
-            {json.dumps(old_payload, indent=2)}
+                Here is the NEW Business Partner profile:
+                {json.dumps(new_payload, indent=2)}
 
-            Here is the NEW profile payload:
-            {json.dumps(new_payload, indent=2)}
+                Instructions:
+                - Welcome the Business Partner.
+                - Address the Business Partner by full name if available.
+                - Mention that their profile has been successfully created.
+                - Include a friendly closing.
+                - Keep it concise and clear.
+                - Don't generate the subject, only the email body.
+                - Generate this email on behalf of "BTP Adoption & Consumption Center"
+                - Format it as an HTML email body (NO code blocks like ```html).
+            """
+        else:
+            prompt = f"""
+                You are a multilingual assistant. Your task is to compare the old and new payloads of a Business Partner profile and generate a personalized, polite, and human-sounding email to inform the Business Partner about the changes made to their profile.
 
-            Instructions:
-            - Detect all changes.
-            - Summarize them clearly.
-            - Address the Business Partner by full name if available.
-            - Include a friendly closing.
-            - Keep it concise and clear.
-            - Don't generate the subject, only the email body.
-            - Generate this email on behalf of "BTP Adoption & Consumption Center"
-            - Format it as an HTML (NO code blocks like ```html):.
-        """
+                Write the email in the language: **{language_name}**
+
+                If no changes are found, reply "NO_CHANGES"
+
+                Here is the OLD profile payload:
+                {json.dumps(old_payload, indent=2)}
+
+                Here is the NEW profile payload:
+                {json.dumps(new_payload, indent=2)}
+
+                Instructions:
+                - Detect all changes.
+                - Summarize them clearly.
+                - Address the Business Partner by full name if available.
+                - Include a friendly closing.
+                - Keep it concise and clear.
+                - Don't generate the subject, only the email body.
+                - Generate this email on behalf of "BTP Adoption & Consumption Center"
+                - Format it as an HTML (NO code blocks like ```html):.
+                - Ignore change_time change_date changes.
+            """
         response = llm.invoke([HumanMessage(content=prompt)])
         response_text = response.content.strip()
 
@@ -99,8 +120,6 @@ def language_code_to_name(code):
     }
 
     return language_map.get(code, "English")
-
-
 
 port = int(os.environ.get('PORT', 3000))
 if not local_testing:

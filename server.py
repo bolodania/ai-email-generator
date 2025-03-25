@@ -13,7 +13,7 @@ import re
 
 load_dotenv()
 
-local_testing = True
+local_testing = False
 
 with open(os.path.join(os.getcwd(), 'env_config.json')) as f:
     aicore_config = json.load(f)
